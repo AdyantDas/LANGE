@@ -1,14 +1,9 @@
-pip freeze > requirements.txt
-```
-
----
-
-**Your final folder structure should look like:**
-```
-LANGE/
-├── index.html
-├── program.py
-├── requirements.txt
-├── README.md
-├── .env           ← never pushed
-└── .gitignore     ← tells git to ignore .env
+fastapi
+uvicorn
+groq
+newspaper3k
+python-docx
+PyMuPDF
+python-dotenv
+requests
+beautifulsoup4
