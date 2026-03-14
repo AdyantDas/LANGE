@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 groq
-newspaper3k
+newspaper4k
 python-docx
 PyMuPDF
 python-dotenv
