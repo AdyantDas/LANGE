@@ -2,6 +2,8 @@ fastapi
 uvicorn
 groq
 newspaper4k
+lxml_html_clean
+lxml[html_clean]
 python-docx
 PyMuPDF
 python-dotenv
