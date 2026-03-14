@@ -227,3 +227,6 @@ async def ask_groq_file(
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+@app.get("/")
+async def root():
+    return {"status": "LANGE API is running"}
