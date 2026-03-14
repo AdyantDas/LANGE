@@ -498,7 +498,7 @@ function CompareMode({ sourceText, sourceUrl, activeTab, file }) {
                 let response;
                 const payload = { target_lang: lang, task: "translate", tone };
                 if (activeTab === "link") {
-                    response = await fetch("http://localhost:8000/ask-url", {
+                    response = await fetch("https://lange.onrender.com/ask-url", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ...payload, url: sourceUrl })
@@ -509,9 +509,9 @@ function CompareMode({ sourceText, sourceUrl, activeTab, file }) {
                     fd.append("target_lang", lang);
                     fd.append("task", "translate");
                     fd.append("tone", tone);
-                    response = await fetch("http://localhost:8000/ask-file", { method: "POST", body: fd });
+                    response = await fetch("https://lange.onrender.com/ask-file", { method: "POST", body: fd });
                 } else {
-                    response = await fetch("http://localhost:8000/ask", {
+                    response = await fetch("https://lange.onrender.com/ask", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ...payload, text: sourceText })
@@ -664,7 +664,7 @@ function App() {
             const payload  = { target_lang: targetLang, task, tone };
 
             if (activeTab === "link") {
-                response = await fetch("http://localhost:8000/ask-url", {
+                response = await fetch("https://lange.onrender.com/ask-url", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ...payload, url: articleUrl }),
@@ -675,9 +675,9 @@ function App() {
                 formData.append("target_lang", targetLang);
                 formData.append("task", task);
                 formData.append("tone", tone);
-                response = await fetch("http://localhost:8000/ask-file", { method: "POST", body: formData });
+                response = await fetch("https://lange.onrender.com/ask-file", { method: "POST", body: formData });
             } else {
-                response = await fetch("http://localhost:8000/ask", {
+                response = await fetch("https://lange.onrender.com/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ...payload, text }),
