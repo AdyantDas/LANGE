@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LANGE | AI Editor</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base:     #f0fdf8;
+            --bg-card:     rgba(255,255,255,0.75);
+            --bg-subtle:   rgba(255,255,255,0.5);
+            --border:      rgba(255,255,255,0.6);
+            --text-primary:#1e293b;
+            --text-muted:  #64748b;
+            --text-faint:  #cbd5e1;
+            --accent:      #059669;
+            --accent-dark: #047857;
+            --accent-glow: rgba(5,150,105,0.15);
+            --pill-bg:     rgba(241,245,249,0.9);
+            --shadow:      rgba(5,150,105,0.12);
+            --bar-track:   #e2e8f0;
+            --bar-political: #f97316;
+            --bar-emotional: #a855f7;
+            --bar-cultural:  #3b82f6;
+        }
+        [data-theme="dark"] {
+            --bg-base:     #0a1512;
+            --bg-card:     rgba(17,34,27,0.85);
+            --bg-subtle:   rgba(255,255,255,0.04);
+            --border:      rgba(255,255,255,0.08);
+            --text-primary:#e2fef5;
+            --text-muted:  #94a3b8;
+            --text-faint:  #334155;
+            --accent:      #10b981;
+            --accent-dark: #34d399;
+            --accent-glow: rgba(16,185,129,0.2);
+            --pill-bg:     rgba(255,255,255,0.06);
+            --shadow:      rgba(16,185,129,0.2);
+            --bar-track:   #1e3a2f;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg-base);
+            min-height: 100vh;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        [data-theme="light"] body {
+            background: radial-gradient(ellipse 80% 60% at 80% -10%, #d1fae5, transparent),
+                        radial-gradient(ellipse 50% 50% at 10% 90%, #ecfdf5, transparent),
+                        #f8fafc;
+        }
+        [data-theme="dark"] body {
+            background: radial-gradient(ellipse 70% 50% at 80% -5%, #052e16, transparent),
+                        radial-gradient(ellipse 50% 60% at 5% 100%, #064e3b, transparent),
+                        #030a07;
+        }
+
+        /* ── GLASS CARD ── */
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 40px var(--shadow), 0 1px 0 rgba(255,255,255,0.1) inset;
+            transition: background 0.4s, border 0.4s, box-shadow 0.4s;
+        }
+
+        /* ── TEXTAREA & INPUTS ── */
+        textarea, input[type="text"] {
+            background: transparent;
+            color: var(--text-primary);
+            caret-color: var(--accent);
+        }
+        textarea::placeholder, input::placeholder { color: var(--text-faint); }
+
+        /* ── SWITCHER ── */
+        .switcher-bg { transition: all 0.35s cubic-bezier(0.4,0,0.2,1); }
+
+        /* ── ACTION BUTTON ── */
+        .action-btn {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            box-shadow: 0 6px 24px var(--accent-glow);
+            transition: all 0.22s ease;
+        }
+        .action-btn:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px var(--accent-glow);
+        }
+        .action-btn:active:not(:disabled) { transform: translateY(0); }
+
+        /* ── HISTORY RESTORE ── */
+        .restore-btn { opacity: 0; transition: opacity 0.2s; }
+        .history-item:hover .restore-btn { opacity: 1; }
+
+        /* ── BIAS BARS ── */
+        .bias-bar-fill { transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+        /* ── TABS ── */
+        .tab-active  { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tab-inactive{ color: var(--text-faint); }
+        .tab-inactive:hover { color: var(--text-muted); }
+
+        /* ── CONFIDENCE BADGE ── */
+        .badge-high   { background:#dcfce7; color:#166534; }
+        .badge-medium { background:#fef9c3; color:#713f12; }
+        .badge-low    { background:#fee2e2; color:#991b1b; }
+        [data-theme="dark"] .badge-high   { background:#14532d; color:#86efac; }
+        [data-theme="dark"] .badge-medium { background:#422006; color:#fde68a; }
+        [data-theme="dark"] .badge-low    { background:#450a0a; color:#fca5a5; }
+
+        /* ── DEBIASED PANEL ── */
+        .debiased-panel {
+            border-left: 3px solid var(--accent);
+            background: var(--accent-glow);
+            border-radius: 0 1rem 1rem 0;
+        }
+
+        /* ── BACK-TRANSLATION RING ── */
+        .bt-ring {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: conic-gradient(var(--accent) var(--pct), var(--bar-track) 0%);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .bt-inner {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ── READING LEVEL PILL ── */
+        .level-pill {
+            background: var(--pill-bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* ── COMPARE GRID ── */
+        .compare-cell {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+        }
+
+        /* ── RESULT TEXT ── */
+        .result-text {
+            color: var(--text-primary);
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        /* ── MONO ── */
+        .mono { font-family: 'DM Mono', monospace; }
+
+        /* ── DARK TOGGLE PILL ── */
+        .toggle-track {
+            width: 38px; height: 20px;
+            border-radius: 999px;
+            background: var(--pill-bg);
+            border: 1px solid var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-thumb {
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        [data-theme="dark"] .toggle-thumb { transform: translateX(18px); }
+
+        /* ── SELECT ── */
+        select {
+            background: transparent;
+            color: var(--text-primary);
+            border: none;
+            outline: none;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+        }
+        select option { background: var(--bg-base); color: var(--text-primary); }
+
+        /* ── COPY/EXPORT BUTTONS ── */
+        .util-btn {
+            color: var(--text-faint);
+            transition: color 0.2s, transform 0.15s;
+        }
+        .util-btn:hover { color: var(--accent); transform: scale(1.1); }
+
+        /* ── FADE IN ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) both; }
+
+        /* ── WORD COUNTER ── */
+        .wc-bar {
+            height: 2px;
+            background: var(--bar-track);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .wc-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.4s ease;
+            border-radius: 999px;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--text-faint); border-radius: 2px; }
+
+        /* ── SPINNER ── */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 0.8s linear infinite; display: inline-block; }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const LANGUAGES = [
+    "English","Spanish","French","German",
+    "Chinese (Simplified)","Chinese (Traditional)",
+    "Japanese","Arabic","Portuguese (Brazil)","Portuguese (Portugal)",
+    "Hindi","Russian","Italian"
+];
+const TONES = ["Neutral","Formal","Casual","Journalistic"];
+const COMPARE_LANGS = ["Spanish","French","German","Chinese (Simplified)","Arabic","Japanese"];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function wordCount(str) {
+    return str.trim() ? str.trim().split(/\s+/).length : 0;
+}
+function readTime(wc) {
+    const mins = Math.ceil(wc / 200);
+    return mins <= 1 ? "< 1 min read" : `${mins} min read`;
+}
+function copyToClipboard(text) {
+    navigator.clipboard?.writeText(text).catch(() => {});
+}
+function exportTxt(text, filename="lange_result.txt") {
+    const blob = new Blob([text], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+// ─── MINI COMPONENTS ─────────────────────────────────────────────────────────
+
+function DarkToggle({ dark, onToggle }) {
+    return (
+        <button onClick={onToggle} className="toggle-track" title="Toggle dark mode">
+            <div className="toggle-thumb"></div>
+        </button>
+    );
+}
+
+function ConfidenceBadge({ level }) {
+    if (!level) return null;
+    const cls = level === "High" ? "badge-high" : level === "Low" ? "badge-low" : "badge-medium";
+    return (
+        <span className={`${cls} mono text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest`}>
+            {level}
+        </span>
+    );
+}
+
+function BiasBar({ label, value, color }) {
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>{label}</span>
+                <span className="mono text-[9px] font-bold" style={{ color }}>{value}</span>
+            </div>
+            <div className="wc-bar">
+                <div
+                    className="bias-bar-fill"
+                    style={{
+                        height: "100%",
+                        width: `${value}%`,
+                        background: color,
+                        borderRadius: "999px"
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
+
+function BTRing({ score }) {
+    return (
+        <div style={{ "--pct": `${score * 3.6}deg` }} className="bt-ring">
+            <div className="bt-inner">
+                <span className="mono text-[9px] font-bold" style={{ color: "var(--accent)" }}>{score}</span>
+            </div>
+        </div>
+    );
+}
+
+function WordStats({ text, label = "Input" }) {
+    const wc = wordCount(text);
+    const chars = text.length;
+    const pct = Math.min(100, (wc / 500) * 100);
+    return (
+        <div style={{ color: "var(--text-faint)", fontSize: "10px", fontWeight: 600 }}>
+            <div className="flex gap-3 mb-1 uppercase tracking-widest">
+                <span>{wc} words</span>
+                <span>{chars} chars</span>
+                <span>{readTime(wc)}</span>
+            </div>
+            <div className="wc-bar" style={{ height: "2px" }}>
+                <div className="wc-fill" style={{ width: `${pct}%` }} />
+            </div>
+        </div>
+    );
+}
+
+// ─── RESULT PANEL ─────────────────────────────────────────────────────────────
+function ResultPanel({ data, loading }) {
+    const [showDebiased, setShowDebiased] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        copyToClipboard(data?.translation || "");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    if (loading) {
+        return (
+            <div className="mt-14 flex flex-col items-center gap-4 fade-up">
+                <div className="spin text-2xl" style={{ color: "var(--accent)" }}>
+                    <i className="fas fa-circle-notch"></i>
+                </div>
+                <p style={{ color: "var(--text-faint)", fontSize: "11px", fontWeight: 600, letterSpacing: "0.15em" }}>
+                    PROCESSING…
+                </p>
+            </div>
+        );
+    }
+
+    if (!data) return null;
+
+    const { translation, bias_score, obj_label, opi_label,
+            bias_categories = {}, debiased, reading_level = {},
+            back_translation_score, confidence } = data;
+
+    const political = bias_categories.political ?? 50;
+    const emotional = bias_categories.emotional ?? 50;
+    const cultural  = bias_categories.cultural  ?? 50;
+    const wc = wordCount(translation);
+
+    return (
+        <div className="mt-14 space-y-8 fade-up">
+
+            {/* ── HEADER ROW ── */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.3em" }}>
+                        RESULT
+                    </span>
+                    <ConfidenceBadge level={confidence} />
+                </div>
+                <div className="flex items-center gap-3">
+                    {/* Reading level */}
+                    {reading_level.translated && (
+                        <span className="level-pill">{reading_level.translated}</span>
+                    )}
+                    {/* Back-translation ring */}
+                    {back_translation_score != null && (
+                        <div className="flex items-center gap-1.5">
+                            <BTRing score={back_translation_score} />
+                            <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 600 }}>BT</span>
+                        </div>
+                    )}
+                    {/* Copy */}
+                    <button className="util-btn" title="Copy result" onClick={handleCopy}>
+                        <i className={`fas ${copied ? "fa-check" : "fa-copy"} text-sm`}></i>
+                    </button>
+                    {/* Export */}
+                    <button className="util-btn" title="Export as .txt" onClick={() => exportTxt(translation)}>
+                        <i className="fas fa-download text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            {/* ── TRANSLATED TEXT ── */}
+            <div style={{
+                borderLeft: "3px solid var(--accent)",
+                paddingLeft: "1.5rem",
+                color: "var(--text-primary)"
+            }}>
+                <p className="result-text">{translation}</p>
+                <div className="mt-3">
+                    <WordStats text={translation} label="Output" />
+                </div>
+            </div>
+
+            {/* ── BIAS BREAKDOWN ── */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.3em" }}>
+                        BIAS ANALYSIS
+                    </span>
+                    <div className="flex gap-2 items-center">
+                        <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700 }}>{obj_label}</span>
+                        <div style={{
+                            width: "80px", height: "4px",
+                            background: `linear-gradient(90deg, var(--accent) ${bias_score}%, var(--bar-track) ${bias_score}%)`,
+                            borderRadius: "999px"
+                        }} />
+                        <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700 }}>{opi_label}</span>
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <BiasBar label="Political" value={political} color="var(--bar-political)" />
+                    <BiasBar label="Emotional" value={emotional} color="var(--bar-emotional)" />
+                    <BiasBar label="Cultural"  value={cultural}  color="var(--bar-cultural)" />
+                </div>
+            </div>
+
+            {/* ── DEBIASED PANEL ── */}
+            {debiased && (
+                <div>
+                    <button
+                        onClick={() => setShowDebiased(v => !v)}
+                        className="flex items-center gap-2 mb-3"
+                        style={{ color: "var(--accent)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase" }}
+                    >
+                        <i className={`fas fa-chevron-${showDebiased ? "up" : "down"} text-[8px]`}></i>
+                        {showDebiased ? "Hide" : "Show"} Debiased Rewrite
+                    </button>
+                    {showDebiased && (
+                        <div className="debiased-panel p-4 fade-up">
+                            <p style={{ color: "var(--text-primary)", fontSize: "0.95rem", lineHeight: 1.75 }}>{debiased}</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── COMPARE MODE ─────────────────────────────────────────────────────────────
+function CompareMode({ sourceText, sourceUrl, activeTab, file }) {
+    const [langs, setLangs] = useState(["Spanish", "French", "German"]);
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [tone, setTone] = useState("Neutral");
+
+    const toggleLang = (l) => {
+        setLangs(prev =>
+            prev.includes(l) ? prev.filter(x => x !== l) : prev.length < 3 ? [...prev, l] : prev
+        );
+    };
+
+    const runCompare = async () => {
+        setLoading(true);
+        setResults([]);
+        const fetches = langs.map(async (lang) => {
+            try {
+                let response;
+                const payload = { target_lang: lang, task: "translate", tone };
+                if (activeTab === "link") {
+                    response = await fetch("http://localhost:8000/ask-url", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ...payload, url: sourceUrl })
+                    });
+                } else if (activeTab === "file") {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("target_lang", lang);
+                    fd.append("task", "translate");
+                    fd.append("tone", tone);
+                    response = await fetch("http://localhost:8000/ask-file", { method: "POST", body: fd });
+                } else {
+                    response = await fetch("http://localhost:8000/ask", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ...payload, text: sourceText })
+                    });
+                }
+                const data = await response.json();
+                return { lang, data };
+            } catch {
+                return { lang, data: null };
+            }
+        });
+        const all = await Promise.all(fetches);
+        setResults(all);
+        setLoading(false);
+    };
+
+    return (
+        <div className="mt-6 space-y-6">
+            {/* Lang selector */}
+            <div>
+                <p style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.3em", marginBottom: "10px" }}>
+                    PICK UP TO 3 LANGUAGES
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    {COMPARE_LANGS.map(l => (
+                        <button
+                            key={l}
+                            onClick={() => toggleLang(l)}
+                            style={{
+                                padding: "4px 14px",
+                                borderRadius: "999px",
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                border: "1px solid",
+                                borderColor: langs.includes(l) ? "var(--accent)" : "var(--border)",
+                                background: langs.includes(l) ? "var(--accent-glow)" : "transparent",
+                                color: langs.includes(l) ? "var(--accent)" : "var(--text-faint)",
+                                cursor: "pointer",
+                                transition: "all 0.2s"
+                            }}
+                        >
+                            {l}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Tone */}
+            <div className="flex items-center gap-3">
+                <span style={{ color: "var(--text-faint)", fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em" }}>TONE</span>
+                {TONES.map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setTone(t)}
+                        style={{
+                            fontSize: "9px", fontWeight: 700,
+                            color: tone === t ? "var(--accent)" : "var(--text-faint)",
+                            transition: "color 0.2s"
+                        }}
+                    >{t}</button>
+                ))}
+            </div>
+
+            <button
+                onClick={runCompare}
+                disabled={loading || langs.length === 0}
+                className="action-btn text-white py-3 px-8 rounded-xl font-bold text-xs tracking-widest disabled:opacity-40"
+            >
+                {loading ? <span className="spin"><i className="fas fa-circle-notch"></i></span> : "COMPARE"}
+            </button>
+
+            {/* Results grid */}
+            {results.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 fade-up">
+                    {results.map(({ lang, data }) => (
+                        <div key={lang} className="compare-cell space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--accent)" }}>{lang}</span>
+                                {data && <ConfidenceBadge level={data.confidence} />}
+                            </div>
+                            {data ? (
+                                <>
+                                    <p style={{ fontSize: "0.82rem", color: "var(--text-primary)", lineHeight: 1.7 }}>
+                                        {data.translation?.substring(0, 200)}…
+                                    </p>
+                                    <div className="space-y-1.5">
+                                        <BiasBar label="Political" value={data.bias_categories?.political ?? 50} color="var(--bar-political)" />
+                                        <BiasBar label="Emotional" value={data.bias_categories?.emotional ?? 50} color="var(--bar-emotional)" />
+                                        <BiasBar label="Cultural"  value={data.bias_categories?.cultural  ?? 50} color="var(--bar-cultural)" />
+                                    </div>
+                                </>
+                            ) : (
+                                <p style={{ fontSize: "0.8rem", color: "var(--text-faint)" }}>Failed to load</p>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+    const [dark, setDark] = useState(false);
+    const [activeTab, setActiveTab] = useState("text");
+    const [task, setTask] = useState("translate");
+    const [text, setText] = useState("");
+    const [targetLang, setTargetLang] = useState("English");
+    const [tone, setTone] = useState("Neutral");
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [file, setFile] = useState(null);
+    const [articleUrl, setArticleUrl] = useState("");
+    const [compareMode, setCompareMode] = useState(false);
+
+    const [history, setHistory] = useState(() => {
+        try { return JSON.parse(localStorage.getItem("lange_v7") || "[]"); }
+        catch { return []; }
+    });
+
+    // Dark mode
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    }, [dark]);
+
+    useEffect(() => {
+        localStorage.setItem("lange_v7", JSON.stringify(history));
+    }, [history]);
+
+    const restoreEntry = (entry) => {
+        setActiveTab(entry.tabType);
+        setTask(entry.task);
+        setResult(entry.output);
+        setTone(entry.tone || "Neutral");
+        if (entry.tabType === "text")  setText(entry.rawInput);
+        if (entry.tabType === "link")  setArticleUrl(entry.rawInput);
+        if (entry.tabType === "file")  setFile({ name: entry.rawInput });
+    };
+
+    const inputValue = activeTab === "text" ? text : activeTab === "link" ? articleUrl : file?.name || "";
+    const inputWC = wordCount(text);
+
+    const handleExecute = async () => {
+        setLoading(true);
+        setResult(null);
+        try {
+            let response;
+            const rawInput = inputValue;
+            const payload  = { target_lang: targetLang, task, tone };
+
+            if (activeTab === "link") {
+                response = await fetch("http://localhost:8000/ask-url", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...payload, url: articleUrl }),
+                });
+            } else if (activeTab === "file") {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("target_lang", targetLang);
+                formData.append("task", task);
+                formData.append("tone", tone);
+                response = await fetch("http://localhost:8000/ask-file", { method: "POST", body: formData });
+            } else {
+                response = await fetch("http://localhost:8000/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...payload, text }),
+                });
+            }
+
+            const data = await response.json();
+            if (response.ok) {
+                setResult(data);
+                const timeString = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const newEntry = {
+                    id: Date.now(),
+                    time: timeString,
+                    inputLabel: rawInput.substring(0, 22),
+                    rawInput,
+                    tabType: activeTab,
+                    output: data,
+                    task,
+                    tone
+                };
+                setHistory(prev => [newEntry, ...prev].slice(0, 8));
+            } else {
+                setResult({ translation: "Server error — check backend.", confidence: "Low" });
+            }
+        } catch {
+            setResult({ translation: "Unable to connect to AI server.", confidence: "Low" });
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="flex flex-col lg:flex-row p-6 lg:p-16 gap-10 justify-center items-start min-h-screen">
+
+            {/* ── SIDEBAR ── */}
+            <div className="w-full lg:w-60 space-y-8 lg:sticky lg:top-16">
+                <div className="px-1">
+                    <div className="flex justify-between items-center mb-5">
+                        <span style={{ fontSize: "9px", fontWeight: 700, color: "var(--accent)", letterSpacing: "0.3em" }}>
+                            ACTIVITY
+                        </span>
+                        <button
+                            onClick={() => setHistory([])}
+                            style={{ fontSize: "9px", fontWeight: 700, color: "var(--text-faint)", transition: "color 0.2s" }}
+                            onMouseOver={e => e.target.style.color = "#f87171"}
+                            onMouseOut={e => e.target.style.color = "var(--text-faint)"}
+                        >CLEAR</button>
+                    </div>
+                    <div className="space-y-5">
+                        {history.map(h => (
+                            <div key={h.id} className="history-item group relative">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <span style={{ fontSize: "9px", fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                                        {h.task} · {h.time}
+                                    </span>
+                                    <button
+                                        onClick={() => restoreEntry(h)}
+                                        className="restore-btn flex items-center gap-1"
+                                        style={{ fontSize: "9px", fontWeight: 800, color: "var(--accent)" }}
+                                    >
+                                        <i className="fas fa-undo-alt text-[8px]"></i> RESTORE
+                                    </button>
+                                </div>
+                                <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {h.inputLabel}…
+                                </p>
+                            </div>
+                        ))}
+                        {history.length === 0 && (
+                            <p style={{ fontSize: "11px", color: "var(--text-faint)", fontStyle: "italic" }}>History is empty</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── MAIN CARD ── */}
+            <div className="max-w-2xl w-full glass rounded-[2.5rem] p-10 lg:p-14 relative">
+
+                {/* HEADER */}
+                <header className="flex justify-between items-center mb-10">
+                    <h1 className="flex items-center gap-2" style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 8px var(--accent)" }}></div>
+                        Lange
+                    </h1>
+                    <div className="flex items-center gap-6">
+                        {["text","link","file"].map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setActiveTab(t)}
+                                className={activeTab === t ? "tab-active" : "tab-inactive"}
+                                style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", paddingBottom: "2px", transition: "all 0.2s", background: "none", border: "none", cursor: "pointer" }}
+                            >{t}</button>
+                        ))}
+                        <DarkToggle dark={dark} onToggle={() => setDark(v => !v)} />
+                    </div>
+                </header>
+
+                {/* INPUT AREA */}
+                <div className="mb-8 min-h-[180px]">
+                    {activeTab === "text" && (
+                        <>
+                            <textarea
+                                style={{
+                                    width: "100%", height: "200px", background: "transparent",
+                                    border: "none", outline: "none", resize: "none",
+                                    fontSize: "1.05rem", color: "var(--text-primary)",
+                                    lineHeight: 1.75, fontFamily: "'DM Sans', sans-serif"
+                                }}
+                                placeholder="Write or paste content…"
+                                value={text}
+                                onChange={e => setText(e.target.value)}
+                            />
+                            <WordStats text={text} />
+                        </>
+                    )}
+                    {activeTab === "link" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            <input
+                                type="text"
+                                style={{
+                                    width: "100%", background: "var(--bg-subtle)",
+                                    border: "1px solid var(--border)", borderRadius: "1rem",
+                                    padding: "1.1rem 1.4rem", outline: "none",
+                                    color: "var(--accent)", fontWeight: 600, fontSize: "0.95rem",
+                                    fontFamily: "'DM Sans', sans-serif", transition: "border 0.2s"
+                                }}
+                                placeholder="Paste article URL…"
+                                value={articleUrl}
+                                onChange={e => setArticleUrl(e.target.value)}
+                                onFocus={e => e.target.style.borderColor = "var(--accent)"}
+                                onBlur={e => e.target.style.borderColor = "var(--border)"}
+                            />
+                        </div>
+                    )}
+                    {activeTab === "file" && (
+                        <div
+                            style={{
+                                border: "1.5px dashed var(--border)", borderRadius: "2rem",
+                                padding: "3.5rem 2rem", textAlign: "center",
+                                transition: "background 0.2s", cursor: "pointer"
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = "var(--accent-glow)"}
+                            onMouseOut={e => e.currentTarget.style.background = "transparent"}
+                        >
+                            <input type="file" className="hidden" id="file-up"
+                                accept=".pdf,.docx,.txt"
+                                onChange={e => setFile(e.target.files[0])} />
+                            <label htmlFor="file-up" style={{ cursor: "pointer" }}>
+                                <i className="fas fa-plus-circle text-2xl mb-3 block" style={{ color: "var(--accent)" }}></i>
+                                <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-muted)" }}>
+                                    {file ? file.name : "Attach PDF, DOCX or TXT"}
+                                </span>
+                                <p style={{ fontSize: "10px", color: "var(--text-faint)", marginTop: "4px" }}>Click to browse</p>
+                            </label>
+                        </div>
+                    )}
+                </div>
+
+                {/* CONTROLS */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+                    {/* Row 1: task switcher + language */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{
+                            position: "relative", display: "flex",
+                            background: "var(--pill-bg)", borderRadius: "999px",
+                            padding: "4px", width: "220px", height: "40px", alignItems: "center",
+                            border: "1px solid var(--border)"
+                        }}>
+                            <div className="switcher-bg" style={{
+                                position: "absolute", height: "30px",
+                                width: "calc(50% - 4px)",
+                                left: task === "translate" ? "4px" : "calc(50%)",
+                                background: "var(--bg-card)",
+                                borderRadius: "999px",
+                                boxShadow: "0 1px 6px rgba(0,0,0,0.08)"
+                            }} />
+                            {["translate","summarize"].map(t => (
+                                <button key={t} onClick={() => setTask(t)} style={{
+                                    position: "relative", zIndex: 1, flex: 1, border: "none",
+                                    background: "none", cursor: "pointer",
+                                    fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em",
+                                    color: task === t ? "var(--accent)" : "var(--text-faint)",
+                                    transition: "color 0.2s", textTransform: "uppercase"
+                                }}>{t}</button>
+                            ))}
+                        </div>
+
+                        <select value={targetLang} onChange={e => setTargetLang(e.target.value)}>
+                            {LANGUAGES.map(l => <option key={l}>{l}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Row 2: tone selector + compare toggle */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                            <span style={{ fontSize: "9px", fontWeight: 700, color: "var(--text-faint)", letterSpacing: "0.2em" }}>TONE</span>
+                            {TONES.map(t => (
+                                <button key={t} onClick={() => setTone(t)} style={{
+                                    fontSize: "9px", fontWeight: 700, border: "none", background: "none",
+                                    cursor: "pointer", transition: "color 0.2s",
+                                    color: tone === t ? "var(--accent)" : "var(--text-faint)"
+                                }}>{t}</button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setCompareMode(v => !v)}
+                            style={{
+                                fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em",
+                                color: compareMode ? "var(--accent)" : "var(--text-faint)",
+                                textTransform: "uppercase", border: "none", background: "none", cursor: "pointer",
+                                display: "flex", alignItems: "center", gap: "5px", transition: "color 0.2s"
+                            }}
+                        >
+                            <i className="fas fa-columns text-[10px]"></i>
+                            {compareMode ? "HIDE" : "COMPARE"}
+                        </button>
+                    </div>
+
+                    {/* Execute button */}
+                    <button
+                        onClick={handleExecute}
+                        disabled={loading}
+                        className="action-btn"
+                        style={{
+                            width: "100%", color: "white", padding: "1.1rem",
+                            borderRadius: "1rem", fontWeight: 700, fontSize: "13px",
+                            letterSpacing: "0.08em", border: "none", cursor: "pointer",
+                            display: "flex", justifyContent: "center", alignItems: "center", gap: "10px"
+                        }}
+                    >
+                        {loading
+                            ? <><span className="spin"><i className="fas fa-circle-notch"></i></span> Processing…</>
+                            : <><i className={`fas fa-${task === "translate" ? "language" : "compress-alt"}`}></i> {task.charAt(0).toUpperCase() + task.slice(1)}</>
+                        }
+                    </button>
+                </div>
+
+                {/* ── RESULT ── */}
+                <ResultPanel data={result} loading={loading} />
+
+                {/* ── COMPARE MODE ── */}
+                {compareMode && (
+                    <div className="mt-12 fade-up" style={{ borderTop: "1px solid var(--border)", paddingTop: "2rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1.25rem" }}>
+                            <i className="fas fa-columns" style={{ color: "var(--accent)", fontSize: "12px" }}></i>
+                            <span style={{ fontSize: "9px", fontWeight: 700, color: "var(--accent)", letterSpacing: "0.3em" }}>CROSS-LANGUAGE COMPARE</span>
+                        </div>
+                        <CompareMode
+                            sourceText={text}
+                            sourceUrl={articleUrl}
+                            activeTab={activeTab}
+                            file={file}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
